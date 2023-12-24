@@ -71,7 +71,7 @@ print_values () {
 }
 
 is_number() {
-	if [[ $1 =~ ^[+-]?[0-9]*\.?[0-9]+$ ]]; then
+	if [[ $1 =~ ^[+-]?[0-9]*\.?[0-9]+%?$ ]]; then
 		return 0
 	else
 		return 1
@@ -80,6 +80,7 @@ is_number() {
 
 is_negative () {
 	local _num=$1
+	is_number "$_num" || return 1
 	if (( $(echo "$_num < 0" | bc -l) )); then
 		return 0
 	else
@@ -137,6 +138,10 @@ trend () {
 avg_change () {
 	local _values=$1
 	local _count=$(awk -F, '{print NF}' <<<"$_values")
-	local _avg=$(echo "($(echo "$_values" | tr ',' '+' | tr -d '%'))/3" | bc -l)
+	if [[ $_count -eq 0 ]]; then
+		printf '-'
+		return 1
+	fi
+	local _avg=$(echo "($(echo "$_values" | tr ',' '+' | tr -d '%'))/$_count" | bc -l)
 	printf '%.2f%%' "$_avg"
 }
