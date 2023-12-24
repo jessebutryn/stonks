@@ -4,12 +4,7 @@ Stonks is a BASH and Python project that leverages the Yahoo Finance API through
 
 ## Table of Contents
 - [Introduction](#introduction)
-- [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
-- [Scripts](#scripts)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Introduction
 
