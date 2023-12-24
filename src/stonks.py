@@ -44,12 +44,18 @@ def main():
     income = data.income_stmt
     cashflow = data.cashflow
 
+    #len_info = len(info.columns)
+    len_balance = len(balance.columns)
+    len_income = len(income.columns)
+    len_cashflow = len(cashflow.columns)
+
     if score or output_csv:
         use_color = False
 
-    if len(balance.columns) == 0:
-        print(f"Error: {ticker} not found")
+    if len_balance == 0 or len_income == 0 or len_cashflow == 0:
+        print(f"Error: {ticker} not enough data")
         sys.exit(1)
+
 
     _raw_cap = info.get('marketCap', 'NaN')
     _mkt_cap = format_currency(_raw_cap)
