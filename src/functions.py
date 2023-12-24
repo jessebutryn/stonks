@@ -50,20 +50,20 @@ def debt_to_equity(balance):
     equity = latest_balance.get('Stockholders Equity', 'NaN')
 
     if debt is None:
-        return latest_balance.get('Total Liabilities Net Minority Interest', 'N/A')
+        return latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
 
     try:
         debt = float(debt)
         equity = float(equity)
 
         if equity == 0:
-            raise ValueError("Stockholders Equity is zero, cannot calculate debt-to-equity ratio")
+            return "NaN"
 
         result = float("{:.2f}".format(debt / equity))
         return result
 
     except (ValueError, TypeError) as e:
-        return "N/A"
+        return "NaN"
     
 def debt_to_earnings(balance, income):
     latest_date = balance.columns.max()
@@ -74,23 +74,23 @@ def debt_to_earnings(balance, income):
     earnings = latest_income.get('Gross Profit', None)
 
     if debt is None:
-        debt = latest_balance.get('Total Liabilities Net Minority Interest', 'N/A')
+        debt = latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
     
     if earnings is None:
-        earnings = latest_income.get('Pretax Income', 'N/A')
+        earnings = latest_income.get('Pretax Income', 'NaN')
 
     try:
         debt = float(debt)
         earnings = float(earnings)
 
         if earnings == 0:
-            raise ValueError("Earnings are zero, cannot calculate debt-to-earnings ratio")
+            return "NaN"
         
         result = float("{:.2f}".format(debt / earnings))
         return result
 
     except (ValueError, TypeError) as e:
-        return "N/A"
+        return "NaN"
     
 def earnings_yield(info):
     try:
@@ -102,7 +102,7 @@ def earnings_yield(info):
         return result
 
     except (ValueError, TypeError) as e:
-        return "N/A"
+        return "NaN"
     
 def revenue_growth(income):
     latest_date = income.columns.max()
@@ -113,6 +113,9 @@ def revenue_growth(income):
 
     latest_rev = latest_income.get('Total Revenue', 'NaN')
     oldest_rev = oldest_income.get('Total Revenue', 'NaN')
+
+    if oldest_rev == 0 or oldest_rev == 'NaN':
+        return "NaN"
 
     change = ((latest_rev - oldest_rev) / oldest_rev) * 100
     avg_change = change / years
@@ -128,14 +131,14 @@ def profit_margin(income):
         total_rev = latest_income.get('Total Revenue', 'NaN')
 
         if total_rev == 0:
-            raise ValueError("Revenue is zero, cannot calculate profit margin")
+            return "NaN"
         
         margin = (net_income / total_rev) * 100
 
         return f"{margin:.2f}%"
 
     except (ValueError, TypeError) as e:
-        return "N/A"
+        return "NaN"
 
 def return_on_equity(balance, income):
     try:
@@ -147,14 +150,14 @@ def return_on_equity(balance, income):
         equity = latest_balance.get('Stockholders Equity', 'NaN')
 
         if equity == 0:
-            raise ValueError("Stockholders Equity is zero, cannot calculate debt-to-equity ratio")
+            return "NaN"
         
         roe = (net_income / equity) * 100
 
         return f"{roe:.2f}%"
         
     except (ValueError, TypeError) as e:
-        return "N/A"
+        return "NaN"
     
 def avg_free_cash_flow(cashflow):
     try:
@@ -179,6 +182,9 @@ def avg_free_cash_flow_change(cashflow):
         latest_fcf = latest_cashflow.get('Free Cash Flow', 'NaN')
         oldest_fcf = oldest_cashflow.get('Free Cash Flow', 'NaN')
 
+        if oldest_fcf == 0 or oldest_fcf == 'NaN':
+            return "NaN"
+
         change = ((latest_fcf - oldest_fcf) / oldest_fcf) * 100
         avg_change = change / years
 
@@ -195,7 +201,7 @@ def fcf_yield(cap, cash):
         cash = float(cash)
 
         if cap <= 0:
-            raise ValueError("Market Capitalization should be greater than zero.")
+            return "NaN"
 
         fcf_yield = (cash / cap) * 100
         return f"{fcf_yield:.2f}%"
@@ -242,6 +248,9 @@ def colorize(value, condition, low_threshold, high_threshold, use_color):
     # Convert value to string
     value_str = str(value)
 
+    if value_str.lower() == 'nan':
+        return value_str
+
     # Check if the last character is NOT a digit
     suffix = value_str[-1] if not value_str[-1].isdigit() else None
     value_str = value_str[:-1] if suffix else value_str
@@ -283,42 +292,6 @@ def extract_numeric_value(value):
     except ValueError:
         return None
     
-def score_metric(value, thresholds):
-    for threshold, score in thresholds:
-        if value > threshold:
-            return score
-    return 0
-
-def calc_score(ticker, table):
-    try:
-        _score = 0
-        debt_to_equity = float(table["Debt to Equity"])
-        debt_to_earnings = float(table["Debt to Earnings"])
-        earnings_yield = float(table["Earnings Yield"])
-        current_ratio = float(table["Current Ratio"])
-        quick_ratio = float(table["Quick Ratio"])
-        avg_revenue_growth = extract_numeric_value(table["Avg Revenue Growth"])
-        profit_margin = extract_numeric_value(table["Profit Margin"])
-        return_on_equity = extract_numeric_value(table["Return on Equity"])
-        avg_cashflow_growth = extract_numeric_value(table["Avg Cashflow Growth"])
-        cashflow_yield = extract_numeric_value(table["Cashflow Yield"])
-
-        _score += score_metric(debt_to_equity, [(0.25, 3), (0.5, 2), (1, 1)])
-        _score += score_metric(debt_to_earnings, [(0.25, 5), (0.5, 2), (1, 1)])
-        _score += score_metric(earnings_yield, [(1, 3), (0.5, 2), (0, 1)])
-        _score += score_metric(current_ratio, [(2, 3), (1, 2), (0.5, 1)])
-        _score += score_metric(quick_ratio, [(2, 3), (1, 2), (0.5, 1)])
-        _score += score_metric(avg_revenue_growth, [(30, 5), (15, 3), (10, 2), (5, 1)])
-        _score += score_metric(profit_margin, [(30, 5), (15, 3), (10, 2), (5, 1)])
-        _score += score_metric(return_on_equity, [(30, 5), (15, 3), (10, 2), (5, 1)])
-        _score += score_metric(avg_cashflow_growth, [(30, 5), (15, 3), (10, 2), (5, 1)])
-        _score += score_metric(cashflow_yield, [(10, 5), (5, 3), (3, 2), (1, 1)])
-
-        return _score
-
-    except (ValueError, TypeError) as e:
-        return f"Failed to score {ticker}"
-
 def remove_color(value):
     # Check if the value is a string
     if isinstance(value, str):
@@ -334,101 +307,101 @@ def remove_colors_from_table(table):
     cleaned_table = {key: remove_color(value) for key, value in table.items()}
     return cleaned_table
 
-# def calc_score(ticker, table):
-#     try:
-#         debt_to_equity = table["Debt to Equity"]
-#         debt_to_earnings = table["Debt to Earnings"]
-#         earnings_yield = table["Earnings Yield"]
-#         current_ratio = table["Current Ratio"]
-#         quick_ratio = table["Quick Ratio"]
-#         avg_revenue_growth = extract_numeric_value(table["Avg Revenue Growth"])
-#         profit_margin = extract_numeric_value(table["Profit Margin"])
-#         return_on_equity = extract_numeric_value(table["Return on Equity"])
-#         avg_cashflow_growth = table["Avg Cashflow Growth"]
-#         cashflow_yield = extract_numeric_value(table["Cashflow Yield"])
-#         _score = 0
+def calc_score(ticker, table):
+    try:
+        debt_to_equity = float(table.get("Debt to Equity", 2))
+        debt_to_earnings = float(table.get("Debt to Earnings", 2))
+        earnings_yield = float(table.get("Earnings Yield", 0))
+        current_ratio = float(table.get("Current Ratio", 0))
+        quick_ratio = float(table.get("Quick Ratio", 0))
+        avg_revenue_growth = extract_numeric_value(table.get("Avg Revenue Growth", 0))
+        profit_margin = extract_numeric_value(table.get("Profit Margin", 0))
+        return_on_equity = extract_numeric_value(table.get("Return on Equity", 0))
+        avg_cashflow_growth = extract_numeric_value(table.get("Avg Cashflow Growth", 0))
+        cashflow_yield = extract_numeric_value(table.get("Cashflow Yield", 0))
+        _score = 0
 
-#         if debt_to_equity < 0.25:
-#             _score += 3
-#         elif debt_to_equity < 0.5:
-#             _score += 2
-#         elif debt_to_equity < 1:
-#             _score += 1
+        if debt_to_equity < 0.25:
+            _score += 3
+        elif debt_to_equity < 0.5:
+            _score += 2
+        elif debt_to_equity < 1:
+            _score += 1
 
-#         if debt_to_earnings < 0.25:
-#             _score += 5
-#         elif debt_to_earnings < 0.5:
-#             _score += 2
-#         elif debt_to_earnings < 1:
-#             _score += 1
+        if debt_to_earnings < 0.25:
+            _score += 5
+        elif debt_to_earnings < 0.5:
+            _score += 2
+        elif debt_to_earnings < 1:
+            _score += 1
 
-#         if earnings_yield > 1:
-#             _score += 3
-#         elif earnings_yield > 0.5:
-#             _score += 2
-#         elif earnings_yield > 0:
-#             _score += 1
+        if earnings_yield > 1:
+            _score += 3
+        elif earnings_yield > 0.5:
+            _score += 2
+        elif earnings_yield > 0:
+            _score += 1
 
-#         if current_ratio > 2:
-#             _score += 3
-#         elif current_ratio > 1:
-#             _score += 2
-#         elif current_ratio > 0.5:
-#             _score += 1
+        if current_ratio > 2:
+            _score += 3
+        elif current_ratio > 1:
+            _score += 2
+        elif current_ratio > 0.5:
+            _score += 1
 
-#         if quick_ratio > 2:
-#             _score += 3
-#         elif quick_ratio > 1:
-#             _score += 2
-#         elif quick_ratio > 0.5:
-#             _score += 1
+        if quick_ratio > 2:
+            _score += 3
+        elif quick_ratio > 1:
+            _score += 2
+        elif quick_ratio > 0.5:
+            _score += 1
 
-#         if avg_revenue_growth > 30:
-#             _score += 5
-#         elif avg_revenue_growth > 15:
-#             _score += 3
-#         elif avg_revenue_growth > 10:
-#             _score += 2
-#         elif avg_revenue_growth > 5:
-#             _score += 1
+        if avg_revenue_growth > 30:
+            _score += 5
+        elif avg_revenue_growth > 15:
+            _score += 3
+        elif avg_revenue_growth > 10:
+            _score += 2
+        elif avg_revenue_growth > 5:
+            _score += 1
 
-#         if profit_margin > 30:
-#             _score += 5
-#         elif profit_margin > 15:
-#             _score += 3
-#         elif profit_margin > 10:
-#             _score += 2
-#         elif profit_margin > 5:
-#             _score += 1
+        if profit_margin > 30:
+            _score += 5
+        elif profit_margin > 15:
+            _score += 3
+        elif profit_margin > 10:
+            _score += 2
+        elif profit_margin > 5:
+            _score += 1
         
-#         if return_on_equity > 30:
-#             _score += 5
-#         elif return_on_equity > 15:
-#             _score += 3
-#         elif return_on_equity > 10:
-#             _score += 2
-#         elif return_on_equity > 5:
-#             _score += 1
+        if return_on_equity > 30:
+            _score += 5
+        elif return_on_equity > 15:
+            _score += 3
+        elif return_on_equity > 10:
+            _score += 2
+        elif return_on_equity > 5:
+            _score += 1
 
-#         if avg_cashflow_growth > 30:
-#             _score += 5
-#         elif avg_cashflow_growth > 15:
-#             _score += 3
-#         elif avg_cashflow_growth > 10:
-#             _score += 2
-#         elif avg_cashflow_growth > 5:
-#             _score += 1
+        if avg_cashflow_growth > 30:
+            _score += 5
+        elif avg_cashflow_growth > 15:
+            _score += 3
+        elif avg_cashflow_growth > 10:
+            _score += 2
+        elif avg_cashflow_growth > 5:
+            _score += 1
 
-#         if cashflow_yield > 10:
-#             _score += 5
-#         elif avg_cashflow_growth > 5:
-#             _score += 3
-#         elif avg_cashflow_growth > 3:
-#             _score += 2
-#         elif avg_cashflow_growth > 1:
-#             _score += 1
+        if cashflow_yield > 10:
+            _score += 5
+        elif avg_cashflow_growth > 5:
+            _score += 3
+        elif avg_cashflow_growth > 3:
+            _score += 2
+        elif avg_cashflow_growth > 1:
+            _score += 1
 
-#         return _score
+        return _score
 
-#     except (ValueError, TypeError) as e:
-#         return f"Failed to score {ticker}"
+    except (ValueError, TypeError) as e:
+        return f"Failed to score {ticker}"
