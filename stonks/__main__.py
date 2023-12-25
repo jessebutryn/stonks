@@ -5,7 +5,9 @@ import csv
 from tabulate import tabulate
 import pandas as pd
 import argparse
-from functions import *
+import stonks.numbers as num
+import stonks.finance as fin
+import stonks.formatting as fmt
     
 def main():
     parser = argparse.ArgumentParser(description='Stonks as hell')
@@ -43,34 +45,34 @@ def main():
         sys.exit(1)
 
     _raw_cap = info.get('marketCap', 'NaN')
-    _mkt_cap = format_currency(_raw_cap)
-    _current_price = format_currency(info.get('currentPrice', 'NaN'))
-    _debt_to_equity = debt_to_equity(balance)
-    _debt_to_equity = colorize(_debt_to_equity, "low", 0.5, 1, use_color)
-    _debt_to_earnings = debt_to_earnings(balance, income)
-    _debt_to_earnings = colorize(_debt_to_earnings, "low", 1, 2, use_color)
-    _earnings_yield = earnings_yield(info)
-    _earnings_yield = colorize(_earnings_yield, "high", 1, 2, use_color)
+    _mkt_cap = num.format_currency(_raw_cap)
+    _current_price = num.format_currency(info.get('currentPrice', 'NaN'))
+    _debt_to_equity = fin.debt_to_equity(balance)
+    _debt_to_equity = fmt.colorize(_debt_to_equity, "low", 0.5, 1, use_color)
+    _debt_to_earnings = fin.debt_to_earnings(balance, income)
+    _debt_to_earnings = fmt.colorize(_debt_to_earnings, "low", 1, 2, use_color)
+    _earnings_yield = fin.earnings_yield(info)
+    _earnings_yield = fmt.colorize(_earnings_yield, "high", 1, 2, use_color)
     _current_ratio = info.get('currentRatio', 'NaN')
-    _current_ratio = colorize(_current_ratio, "high", 1, 1, use_color)
+    _current_ratio = fmt.colorize(_current_ratio, "high", 1, 1, use_color)
     _quick_ratio = info.get('quickRatio', 'NaN')
-    _quick_ratio = colorize(_quick_ratio, "high", 1, 1, use_color)
-    _avg_revenue_growth = revenue_growth(income)
-    _avg_revenue_growth = colorize(_avg_revenue_growth, "high", 8, 12, use_color)
-    _profit_margin = profit_margin(income)
-    _profit_margin = colorize(_profit_margin, "high", 10, 15, use_color)
-    _roe = return_on_equity(balance, income)
-    _roe = colorize(_roe, "high", 10, 15, use_color)
+    _quick_ratio = fmt.colorize(_quick_ratio, "high", 1, 1, use_color)
+    _avg_revenue_growth = fin.revenue_growth(income)
+    _avg_revenue_growth = fmt.colorize(_avg_revenue_growth, "high", 8, 12, use_color)
+    _profit_margin = fin.profit_margin(income)
+    _profit_margin = fmt.colorize(_profit_margin, "high", 10, 15, use_color)
+    _roe = fin.return_on_equity(balance, income)
+    _roe = fmt.colorize(_roe, "high", 10, 15, use_color)
     _eps = info.get('trailingEps', 'NaN')
-    _eps = colorize(_eps, "high", 3, 8, use_color)
+    _eps = fmt.colorize(_eps, "high", 3, 8, use_color)
     _pe = round(float(info.get('trailingPE', 'NaN')), 2)
-    _avg_fcf_change = avg_free_cash_flow_change(cashflow)
-    _avg_fcf_change = colorize(_avg_fcf_change, "high", 5, 10, use_color)
+    _avg_fcf_change = fin.avg_free_cash_flow_change(cashflow)
+    _avg_fcf_change = fmt.colorize(_avg_fcf_change, "high", 5, 10, use_color)
     _raw_fcf = cashflow.loc['Free Cash Flow'].sort_index(ascending=False).mean()
-    _avg_fcf = format_currency(_raw_fcf)
-    _avg_fcf = colorize(_avg_fcf, "high", 0, 1, use_color)
-    _fcf_yield = fcf_yield(_raw_cap, _raw_fcf)
-    _fcf_yield = colorize(_fcf_yield, "high", 0, 5, use_color)
+    _avg_fcf = num.format_currency(_raw_fcf)
+    _avg_fcf = fmt.colorize(_avg_fcf, "high", 0, 1, use_color)
+    _fcf_yield = fin.fcf_yield(_raw_cap, _raw_fcf)
+    _fcf_yield = fmt.colorize(_fcf_yield, "high", 0, 5, use_color)
 
     table = {
         "Market Cap": _mkt_cap,
@@ -90,9 +92,9 @@ def main():
         "Cashflow Yield": _fcf_yield,
     }
 
-    clean_table = remove_colors_from_table(table)
-    _score = calc_score(ticker, clean_table)
-    _score = colorize(_score, "high", 20, 28, use_color)
+    clean_table = fmt.remove_colors_from_table(table)
+    _score = fin.calc_score(ticker, clean_table)
+    _score = fmt.colorize(_score, "high", 20, 28, use_color)
     table["Score"] = _score
 
     if summarize:
@@ -102,11 +104,8 @@ def main():
                 csv_writer.writerow(["Ticker"] + list(table.keys()))
             csv_writer.writerow([ticker] + [str(value) for value in table.values()])
         else:
-            # Output as a table
             table_as_list = [[key, value] for key, value in table.items()]
             print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
-        # table_as_list = [[key, value] for key, value in table.items()]
-        # print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
     elif score:
         print(f"{ticker}:{_score}")
     else:

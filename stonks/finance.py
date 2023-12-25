@@ -1,25 +1,4 @@
-import re
-
-def format_currency(value):
-    value = float(value)
-    
-    sign = '-' if value < 0 else ''
-    
-    abs_value = abs(value)
-
-    suffixes = ['', 'K', 'M', 'B', 'T', 'Q']
-    order_of_magnitude = 0
-    
-    while abs_value >= 1000 and order_of_magnitude < len(suffixes) - 1:
-        abs_value /= 1000.0
-        order_of_magnitude += 1
-    
-    formatted_value = f'{abs_value:.2f}'
-    
-    if '.' in formatted_value and formatted_value.endswith('00'):
-        formatted_value = formatted_value[:-3]
-    
-    return f'{sign}{formatted_value}{suffixes[order_of_magnitude]}'
+import stonks.numbers as num
 
 def debt_to_equity(balance):
     latest_date = balance.columns.max()
@@ -100,6 +79,7 @@ def revenue_growth(income):
     avg_change = change / years
 
     return f"{avg_change:.2f}%"
+
 
 def profit_margin(income):
     try:
@@ -186,63 +166,6 @@ def fcf_yield(cap, cash):
     except ValueError as e:
         return f"Error: {e}"    
 
-def colorize(value, condition, low_threshold, high_threshold, use_color):
-    if not use_color:
-        return str(value)
-
-    value_str = str(value)
-
-    if value_str.lower() == 'nan':
-        return value_str
-
-    suffix = value_str[-1] if not value_str[-1].isdigit() else None
-    value_str = value_str[:-1] if suffix else value_str
-
-    value_float = float(value_str)
-
-    if condition == "high":
-        if value_float > high_threshold:
-            color = '\033[92m'  # Green
-        elif low_threshold <= value_float <= high_threshold:
-            color = '\033[93m'  # Yellow
-        else:
-            color = '\033[91m'  # Red
-    elif condition == "low":
-        if value_float > high_threshold:
-            color = '\033[91m'  # Red
-        elif low_threshold <= value_float <= high_threshold:
-            color = '\033[93m'  # Yellow
-        else:
-            color = '\033[92m'  # Green
-    else:
-        color = '\033[0m'  # Default color
-
-    formatted_value = f"{value_float:.2f}"
-
-    reset_color = '\033[0m'
-
-    return f"{color}{formatted_value}{suffix}{reset_color}" if suffix else f"{color}{formatted_value}{reset_color}"
-
-def extract_numeric_value(value):
-    if isinstance(value, str):
-        value = value.rstrip('%').rstrip('M').rstrip('B').rstrip('T').rstrip('Q').rstrip('K')
-
-    try:
-        return float(value)
-    except ValueError:
-        return None
-    
-def remove_color(value):
-    if isinstance(value, str):
-        ansi_escape = re.compile(r'\033\[[0-9;]*[mG]')
-        return ansi_escape.sub('', value)
-    else:
-        return value
-
-def remove_colors_from_table(table):
-    cleaned_table = {key: remove_color(value) for key, value in table.items()}
-    return cleaned_table
-
 def calc_score(ticker, table):
     try:
         debt_to_equity = float(table.get("Debt to Equity", 2))
@@ -250,11 +173,11 @@ def calc_score(ticker, table):
         earnings_yield = float(table.get("Earnings Yield", 0))
         current_ratio = float(table.get("Current Ratio", 0))
         quick_ratio = float(table.get("Quick Ratio", 0))
-        avg_revenue_growth = extract_numeric_value(table.get("Avg Revenue Growth", 0))
-        profit_margin = extract_numeric_value(table.get("Profit Margin", 0))
-        return_on_equity = extract_numeric_value(table.get("Return on Equity", 0))
-        avg_cashflow_growth = extract_numeric_value(table.get("Avg Cashflow Growth", 0))
-        cashflow_yield = extract_numeric_value(table.get("Cashflow Yield", 0))
+        avg_revenue_growth = num.extract_numeric_value(table.get("Avg Revenue Growth", 0))
+        profit_margin = num.extract_numeric_value(table.get("Profit Margin", 0))
+        return_on_equity = num.extract_numeric_value(table.get("Return on Equity", 0))
+        avg_cashflow_growth = num.extract_numeric_value(table.get("Avg Cashflow Growth", 0))
+        cashflow_yield = num.extract_numeric_value(table.get("Cashflow Yield", 0))
         _score = 0
 
         if debt_to_equity < 0.25:
