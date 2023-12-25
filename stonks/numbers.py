@@ -1,4 +1,8 @@
 def format_currency(value):
+    # Convert long currency values into a more human readable format.  This is
+    # accomplished by setting an object of suffixes K, M, B, T, and Q.  If you
+    # can divide the number by 1000 use suffix K, if you can divide it by 1000
+    # again use suffix M, repeat until you can no longer divide by 1000
     value = float(value)
     
     sign = '-' if value < 0 else ''
@@ -20,6 +24,8 @@ def format_currency(value):
     return f'{sign}{formatted_value}{suffixes[order_of_magnitude]}'
 
 def extract_numeric_value(value):
+    # In the event we need to get the raw number that was converted to human
+    # readable currency format this function will strip the currency suffix.
     if isinstance(value, str):
         value = value.rstrip('%').rstrip('M').rstrip('B').rstrip('T').rstrip('Q').rstrip('K')
 

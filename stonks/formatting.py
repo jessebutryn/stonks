@@ -1,19 +1,38 @@
 import re
 
 def colorize(value, condition, low_threshold, high_threshold, use_color):
+    # This function will take a numeric value and colorize it either red, yellow, 
+    # or green depending on whether that number is determined to be "good", "neutral",
+    # or "bad". 
+    #
+    # You provide the following parameters to the function:
+    # value             =   The numerical value to be colorized
+    #                       (supports percentages and numbers with currency suffixes ('K','M','B',etc))
+    # condition         =   'low' or 'high'
+    #                       If condition is 'low' being less than threshold is green
+    #                       If condition is 'high' being greater than threshold is green
+    # low_threshold     =   The numerical value for low threshold
+    # high_threshold    =   The numerical value for high threshold
+    # use_color         =   This carries over the use_color parameter from main.  If --no_color
+    #                       is specified this function will simply return the value as is.
+    #
     if not use_color:
         return str(value)
 
     value_str = str(value)
 
+    # If the value is 'NaN' return it as is
     if value_str.lower() == 'nan':
         return value_str
 
+    # If the value has a non digit suffix store it and remove it
     suffix = value_str[-1] if not value_str[-1].isdigit() else None
     value_str = value_str[:-1] if suffix else value_str
 
+    # Convert value to float
     value_float = float(value_str)
 
+    # Make condition determinations
     if condition == "high":
         if value_float > high_threshold:
             color = '\033[92m'  # Green
@@ -31,13 +50,16 @@ def colorize(value, condition, low_threshold, high_threshold, use_color):
     else:
         color = '\033[0m'  # Default color
 
+    # Convert value to a 2 digit float
     formatted_value = f"{value_float:.2f}"
 
     reset_color = '\033[0m'
 
+    # Print value with color.  If there is a suffix add it back on.
     return f"{color}{formatted_value}{suffix}{reset_color}" if suffix else f"{color}{formatted_value}{reset_color}"
     
 def remove_color(value):
+    # Remove all color values from input.
     if isinstance(value, str):
         ansi_escape = re.compile(r'\033\[[0-9;]*[mG]')
         return ansi_escape.sub('', value)
@@ -45,5 +67,6 @@ def remove_color(value):
         return value
 
 def remove_colors_from_table(table):
+    # Remove all color values from the inputted table.
     cleaned_table = {key: remove_color(value) for key, value in table.items()}
     return cleaned_table

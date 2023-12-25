@@ -5,7 +5,7 @@ setup(
     version='1.0.0',
     packages=find_packages(),
     install_requires=[
-        'yfinance==0.2.33',
+		'yfinance==0.2.33',
 		'pandas==2.0.3',
 		'tabulate==0.9.0',
     ],
