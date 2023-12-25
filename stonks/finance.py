@@ -1,12 +1,15 @@
 import stonks.numbers as num
 
 def debt_to_equity(balance):
+    # Calculate the debt to equity ratio by dividing total debt by stockholder's equity
     latest_date = balance.columns.max()
     latest_balance = balance[latest_date]
     
     debt = latest_balance.get('Total Debt', None)
     equity = latest_balance.get('Stockholders Equity', 'NaN')
 
+    # In the event there is no "Total Debt" metric for the given company we will try
+    # to use 'Total Liabilities Net Minority Interest' instead.
     if debt is None:
         return latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
 
@@ -24,6 +27,7 @@ def debt_to_equity(balance):
         return "NaN"
     
 def debt_to_earnings(balance, income):
+    # Calculate the debt to earnings ratio by dividing total debt by gross profit.
     latest_date = balance.columns.max()
     latest_balance = balance[latest_date]
     latest_income = income[latest_date]
@@ -31,9 +35,13 @@ def debt_to_earnings(balance, income):
     debt = latest_balance.get('Total Debt', None)
     earnings = latest_income.get('Gross Profit', None)
 
+    # In the event there is no "Total Debt" metric for the given company we will try
+    # to use "Total Liabilities Net Minority Interest" instead.
     if debt is None:
         debt = latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
     
+    # In the event there is no "Gross Profit" metric for the given company we will try
+    # to use "Pretax Income" instead.
     if earnings is None:
         earnings = latest_income.get('Pretax Income', 'NaN')
 
@@ -51,6 +59,7 @@ def debt_to_earnings(balance, income):
         return "NaN"
     
 def earnings_yield(info):
+    # Calculate earnings yield by diving earnings per share by the current share price
     try:
         earnings_per_share = info.get('trailingEps', 'NaN')
         current_price = info.get('currentPrice', 'NaN')
@@ -63,6 +72,8 @@ def earnings_yield(info):
         return "NaN"
     
 def revenue_growth(income):
+    # Calculate percentage of growth from the oldest revenue number returned
+    # (typically 4 years) to the newest revenue number returned.
     latest_date = income.columns.max()
     oldest_date = income.columns.min()
     latest_income = income[latest_date]
@@ -82,6 +93,7 @@ def revenue_growth(income):
 
 
 def profit_margin(income):
+    # Calculate the profit margin by dividing "Net Income" by "Total Revenue"
     try:
         latest_date = income.columns.max()
         latest_income = income[latest_date]
@@ -100,6 +112,8 @@ def profit_margin(income):
         return "NaN"
 
 def return_on_equity(balance, income):
+    # Calculate return on equity by dividing "Net Income" by the
+    # "Stockholders Equity"
     try:
         latest_date = balance.columns.max()
         latest_balance = balance[latest_date]
@@ -118,19 +132,9 @@ def return_on_equity(balance, income):
     except (ValueError, TypeError) as e:
         return "NaN"
     
-def avg_free_cash_flow(cashflow):
-    try:
-        latest_date = cashflow.columns.max()
-        oldest_date = cashflow.columns.min()
-        latest_cashflow = cashflow[latest_date]
-        oldest_cashflow = cashflow[oldest_date]
-        years = len(cashflow.columns)
-        flow = cashflow.loc['Free Cash Flow'].sort_index(ascending=False)
-    
-    except (ValueError, TypeError) as e:
-        return "NaN"
-    
 def avg_free_cash_flow_change(cashflow):
+    # Calculate average free cash flow change year over year from oldest
+    # data returned (typically 4 years) to latest year returned.
     try:
         latest_date = cashflow.columns.max()
         oldest_date = cashflow.columns.min()
@@ -153,6 +157,10 @@ def avg_free_cash_flow_change(cashflow):
         return "NaN"
     
 def fcf_yield(cap, cash):
+    # Calculate the free cash flow yield by dividing free cash flow by
+    # the current market cap.  In my opinion this is possible the most
+    # important metric when looking at a business.  How much does it cost
+    # and how much cash will it put in my pocket?
     try:
         cap = float(cap)
         cash = float(cash)
@@ -167,6 +175,10 @@ def fcf_yield(cap, cash):
         return f"Error: {e}"    
 
 def calc_score(ticker, table):
+    # This is probably an excessively rudimentary function to calculate the
+    # "score" of the given business.  This is completely opinionated and even
+    # somewhat arbitrary.  I'm not sure what the actual threshold for a "good"
+    # score is but the "perfect" score is 42.  Life, the universe, and everything.
     try:
         debt_to_equity = float(table.get("Debt to Equity", 2))
         debt_to_earnings = float(table.get("Debt to Earnings", 2))
@@ -180,6 +192,7 @@ def calc_score(ticker, table):
         cashflow_yield = num.extract_numeric_value(table.get("Cashflow Yield", 0))
         _score = 0
 
+        # The best debt is no debt but the lower the better.
         if debt_to_equity < 0.25:
             _score += 3
         elif debt_to_equity < 0.5:
@@ -187,6 +200,7 @@ def calc_score(ticker, table):
         elif debt_to_equity < 1:
             _score += 1
 
+        # The best debt is no debt but the lower the better.
         if debt_to_earnings < 0.25:
             _score += 5
         elif debt_to_earnings < 0.5:
@@ -194,6 +208,11 @@ def calc_score(ticker, table):
         elif debt_to_earnings < 1:
             _score += 1
 
+        # Higher earnings are rewarded.  This may need to be adjusted as
+        # it is extremely unlikely a company will ever have greater earnings
+        # than cost.  And if that were to happen it would likely mean some new
+        # information about the company indicates future prospects are very much
+        # different than past.
         if earnings_yield > 1:
             _score += 3
         elif earnings_yield > 0.5:
@@ -201,6 +220,12 @@ def calc_score(ticker, table):
         elif earnings_yield > 0:
             _score += 1
 
+        # Current ratio is the ratio of all assets to all liabilities.  Since
+        # almost all companies engage in very creative accounting tactics I
+        # don't trust this metric alone which is why I added debt to equity and
+        # debt to earnings metrics. 
+        #
+        # Still we like to see more assets than liabilities.
         if current_ratio > 2:
             _score += 3
         elif current_ratio > 1:
@@ -208,6 +233,8 @@ def calc_score(ticker, table):
         elif current_ratio > 0.5:
             _score += 1
 
+        # Quick ratio (or Acid test ratio) is a bit better than the current ratio
+        # as it only accounts for liquid assets vs liabilities.
         if quick_ratio > 2:
             _score += 3
         elif quick_ratio > 1:
@@ -215,6 +242,7 @@ def calc_score(ticker, table):
         elif quick_ratio > 0.5:
             _score += 1
 
+        # The faster a company grows revenue the better.
         if avg_revenue_growth > 30:
             _score += 5
         elif avg_revenue_growth > 15:
@@ -224,6 +252,7 @@ def calc_score(ticker, table):
         elif avg_revenue_growth > 5:
             _score += 1
 
+        # Higher profit margins are better
         if profit_margin > 30:
             _score += 5
         elif profit_margin > 15:
@@ -233,6 +262,7 @@ def calc_score(ticker, table):
         elif profit_margin > 5:
             _score += 1
         
+        # Higher return on equity is better
         if return_on_equity > 30:
             _score += 5
         elif return_on_equity > 15:
@@ -242,6 +272,7 @@ def calc_score(ticker, table):
         elif return_on_equity > 5:
             _score += 1
 
+        # Growing cashflow is better
         if avg_cashflow_growth > 30:
             _score += 5
         elif avg_cashflow_growth > 15:
@@ -251,6 +282,10 @@ def calc_score(ticker, table):
         elif avg_cashflow_growth > 5:
             _score += 1
 
+        # Cashflow yield, again, is my favorite metric for a business. This
+        # number tells you what you get for your dollar.  You can't accurately
+        # predict the future prospects of a company but this number tells you
+        # what kind of return the business presently makes.
         if cashflow_yield > 10:
             _score += 5
         elif avg_cashflow_growth > 5:

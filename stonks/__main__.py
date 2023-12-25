@@ -8,42 +8,32 @@ import argparse
 import stonks.numbers as num
 import stonks.finance as fin
 import stonks.formatting as fmt
-    
-def main():
-    parser = argparse.ArgumentParser(description='Stonks as hell')
-    parser.add_argument('ticker', type=str, help='Stock ticker symbol')
-    parser.add_argument('--no-color', action='store_true', help='Disable colored output')
-    parser.add_argument('--summarize', action='store_true', help='Run summarize commands')
-    parser.add_argument('--score', action='store_true', help='Run score commands')
-    parser.add_argument('--csv', action='store_true', help='Output in CSV format') 
-    parser.add_argument('-H', '--header', action='store_true', help='Include header in CSV output')
 
-    args = parser.parse_args()
+def process_ticker(ticker, use_color, output_csv, csv_writer):
+    # This function gathers all the information required for a single given ticker and outputs
+    # in the desired format.
 
-    ticker = args.ticker
-    use_color = not args.no_color
-    summarize = args.summarize
-    score = args.score
-    output_csv = args.csv
-    use_header = args.header
-
+    # Gather the required info from yfinance
     data = yf.Ticker(ticker)
     info = data.info
     balance = data.balance_sheet
     income = data.income_stmt
     cashflow = data.cashflow
 
+    # Check length of yfinance objects and exit if any are empty
     len_balance = len(balance.columns)
     len_income = len(income.columns)
     len_cashflow = len(cashflow.columns)
-
-    if score or output_csv:
-        use_color = False
 
     if len_balance == 0 or len_income == 0 or len_cashflow == 0:
         print(f"Error: {ticker} not enough data")
         sys.exit(1)
 
+    # We don't want color formatting data mucking up csv output
+    if output_csv:
+        use_color = False
+
+    # Gather up all the desired metrics for our output.
     _raw_cap = info.get('marketCap', 'NaN')
     _mkt_cap = num.format_currency(_raw_cap)
     _current_price = num.format_currency(info.get('currentPrice', 'NaN'))
@@ -74,7 +64,9 @@ def main():
     _fcf_yield = fin.fcf_yield(_raw_cap, _raw_fcf)
     _fcf_yield = fmt.colorize(_fcf_yield, "high", 0, 5, use_color)
 
+    # Build table with desired data
     table = {
+        "Ticker": ticker.upper(),
         "Market Cap": _mkt_cap,
         "Current Price": _current_price,
         "Debt to Equity": _debt_to_equity,
@@ -92,24 +84,62 @@ def main():
         "Cashflow Yield": _fcf_yield,
     }
 
+    # We need a table with no colors in order to calculate the score
     clean_table = fmt.remove_colors_from_table(table)
     _score = fin.calc_score(ticker, clean_table)
     _score = fmt.colorize(_score, "high", 20, 28, use_color)
+    # Add score to orginal table
     table["Score"] = _score
-
-    if summarize:
-        if output_csv:
-            csv_writer = csv.writer(sys.stdout)
-            if use_header:
-                csv_writer.writerow(["Ticker"] + list(table.keys()))
-            csv_writer.writerow([ticker] + [str(value) for value in table.values()])
-        else:
-            table_as_list = [[key, value] for key, value in table.items()]
-            print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
-    elif score:
-        print(f"{ticker}:{_score}")
+ 
+    # Output data in either csv or table format depending on what is requested
+    if output_csv:
+        csv_writer.writerow([str(value) for value in table.values()])
     else:
-        print('No specific action specified.')
+        table_as_list = [[key, value] for key, value in table.items()]
+        print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
+    
+def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser(description='Stonks - A financial analysis tool for stock tickers, providing key metrics and scores for informed investment decisions.')
+    parser.add_argument('tickers', nargs='*', type=str, help='Stock ticker symbols')
+    parser.add_argument('-f', '--file', type=str, help='Read ticker symbols from a file')
+    parser.add_argument('--no-color', action='store_true', help='Disable colored output')
+    parser.add_argument('--csv', action='store_true', help='Output in CSV format') 
+    parser.add_argument('-H', '--header', action='store_true', help='Include header in CSV output')
+
+    args = parser.parse_args()
+
+    use_color = not args.no_color
+    output_csv = args.csv
+    use_header = args.header
+    tickers = []
+
+    # read args from file 
+    if args.file:
+        with open(args.file, 'r') as file:
+            tickers.extend(file.read().splitlines())
+    else:
+        tickers = args.tickers
+
+    # errexit if no tickers are provided
+    if not tickers:
+        print("Error: No ticker symbols provided.")
+        sys.exit(1)
+
+    # define csv_writer
+    csv_writer = csv.writer(sys.stdout)
+
+    # I'm not a fan of how this works but if header is to be printed I only want it to be printed once so
+    # this manually creates that header row before the process_ticker() iterations.
+    if output_csv and use_header:
+        csv_writer.writerow(["Ticker", "Market Cap", "Current Price", "Debt to Equity", "Debt to Earnings",
+                            "Earnings Yield", "Current Ratio", "Quick Ratio", "Avg Revenue Growth",
+                            "Profit Margin", "Return on Equity", "EPS", "PE", "Avg Cashflow",
+                            "Avg Cashflow Growth", "Cashflow Yield", "Score"])
+
+    # Run process_ticker() for each ticker in tickers.
+    for ticker in tickers:
+        process_ticker(ticker, use_color, output_csv, csv_writer)
 
 if __name__ == "__main__":
     main()
