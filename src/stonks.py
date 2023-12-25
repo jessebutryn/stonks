@@ -5,19 +5,7 @@ import csv
 from tabulate import tabulate
 import pandas as pd
 import argparse
-#from pprint import pprint
 from functions import *
-
-# pd.set_option('display.max_rows', None)
-# pd.set_option('display.max_columns', None)
-# use_color = True
-
-# if __name__ == "__main__":
-#     if len(sys.argv) != 2:
-#         print("Usage: python financial_data.py <ticker>")
-#         sys.exit(1)
-
-#     ticker = sys.argv[1]
     
 def main():
     parser = argparse.ArgumentParser(description='Stonks as hell')
@@ -30,7 +18,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Access the arguments
     ticker = args.ticker
     use_color = not args.no_color
     summarize = args.summarize
@@ -44,7 +31,6 @@ def main():
     income = data.income_stmt
     cashflow = data.cashflow
 
-    #len_info = len(info.columns)
     len_balance = len(balance.columns)
     len_income = len(income.columns)
     len_cashflow = len(cashflow.columns)
@@ -55,7 +41,6 @@ def main():
     if len_balance == 0 or len_income == 0 or len_cashflow == 0:
         print(f"Error: {ticker} not enough data")
         sys.exit(1)
-
 
     _raw_cap = info.get('marketCap', 'NaN')
     _mkt_cap = format_currency(_raw_cap)
@@ -107,7 +92,7 @@ def main():
 
     clean_table = remove_colors_from_table(table)
     _score = calc_score(ticker, clean_table)
-    _score = colorize(_score, "high", 15, 30, use_color)
+    _score = colorize(_score, "high", 20, 28, use_color)
     table["Score"] = _score
 
     if summarize:

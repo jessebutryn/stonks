@@ -1,30 +1,10 @@
 import re
 
-# def format_currency(value):
-#     value = float(value)
-    
-#     suffixes = ['', 'K', 'M', 'B', 'T', 'Q']
-#     order_of_magnitude = 0
-    
-#     while value >= 1000 and order_of_magnitude < len(suffixes) - 1:
-#         value /= 1000.0
-#         order_of_magnitude += 1
-    
-#     formatted_value = f'{value:.2f}'
-    
-#     if '.' in formatted_value and formatted_value.endswith('00'):
-#         # Remove unnecessary '.00'
-#         formatted_value = formatted_value[:-3]
-    
-#     return f'{formatted_value}{suffixes[order_of_magnitude]}'
-
 def format_currency(value):
     value = float(value)
     
-    # Determine the sign of the value
     sign = '-' if value < 0 else ''
     
-    # Take the absolute value for processing
     abs_value = abs(value)
 
     suffixes = ['', 'K', 'M', 'B', 'T', 'Q']
@@ -37,7 +17,6 @@ def format_currency(value):
     formatted_value = f'{abs_value:.2f}'
     
     if '.' in formatted_value and formatted_value.endswith('00'):
-        # Remove unnecessary '.00'
         formatted_value = formatted_value[:-3]
     
     return f'{sign}{formatted_value}{suffixes[order_of_magnitude]}'
@@ -188,8 +167,6 @@ def avg_free_cash_flow_change(cashflow):
         change = ((latest_fcf - oldest_fcf) / oldest_fcf) * 100
         avg_change = change / years
 
-        #return latest_fcf
-
         return f"{avg_change:.2f}%"
 
     except (ValueError, TypeError) as e:
@@ -209,49 +186,15 @@ def fcf_yield(cap, cash):
     except ValueError as e:
         return f"Error: {e}"    
 
-# def colorize(value, condition, low_threshold, high_threshold, use_color):
-#     if not use_color:
-#         return str(value)
-
-#     # Check if the value is a percentage and remove the percentage sign
-#     is_percentage = isinstance(value, str) and value.endswith('%')
-#     value_float = float(value.rstrip('%')) if is_percentage else float(value)
-
-#     if condition == "high":
-#         if value_float > high_threshold:
-#             color = '\033[92m'  # Green
-#         elif low_threshold <= value_float <= high_threshold:
-#             color = '\033[93m'  # Yellow
-#         else:
-#             color = '\033[91m'  # Red
-#     elif condition == "low":
-#         if value_float > high_threshold:
-#             color = '\033[91m'  # Red
-#         elif low_threshold <= value_float <= high_threshold:
-#             color = '\033[93m'  # Yellow
-#         else:
-#             color = '\033[92m'  # Green
-#     else:
-#         color = '\033[0m'  # Default color
-
-#     formatted_value = f"{value:.2f}" if isinstance(value, (float, int)) else str(value)
-
-#     # Reset color to default after printing
-#     reset_color = '\033[0m'
-
-#     return f"{color}{formatted_value}{reset_color}"
-
 def colorize(value, condition, low_threshold, high_threshold, use_color):
     if not use_color:
         return str(value)
 
-    # Convert value to string
     value_str = str(value)
 
     if value_str.lower() == 'nan':
         return value_str
 
-    # Check if the last character is NOT a digit
     suffix = value_str[-1] if not value_str[-1].isdigit() else None
     value_str = value_str[:-1] if suffix else value_str
 
@@ -276,15 +219,12 @@ def colorize(value, condition, low_threshold, high_threshold, use_color):
 
     formatted_value = f"{value_float:.2f}"
 
-    # Reset color to default after printing
     reset_color = '\033[0m'
 
-    # Include suffix if it exists
     return f"{color}{formatted_value}{suffix}{reset_color}" if suffix else f"{color}{formatted_value}{reset_color}"
 
 def extract_numeric_value(value):
     if isinstance(value, str):
-        # Remove percentage sign and currency suffix
         value = value.rstrip('%').rstrip('M').rstrip('B').rstrip('T').rstrip('Q').rstrip('K')
 
     try:
@@ -293,17 +233,13 @@ def extract_numeric_value(value):
         return None
     
 def remove_color(value):
-    # Check if the value is a string
     if isinstance(value, str):
-        # Remove ANSI escape codes (color codes) using a regular expression
         ansi_escape = re.compile(r'\033\[[0-9;]*[mG]')
         return ansi_escape.sub('', value)
     else:
-        # If not a string, return the value unchanged
         return value
 
 def remove_colors_from_table(table):
-    # Create a new dictionary with colors removed from values
     cleaned_table = {key: remove_color(value) for key, value in table.items()}
     return cleaned_table
 
