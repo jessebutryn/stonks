@@ -10,7 +10,7 @@ def debt_to_equity(balance):
 
     # In the event there is no "Total Debt" metric for the given company we will try
     # to use 'Total Liabilities Net Minority Interest' instead.
-    if debt is None:
+    if debt is None or str(debt).lower() == 'nan':
         return latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
 
     try:
@@ -37,12 +37,12 @@ def debt_to_earnings(balance, income):
 
     # In the event there is no "Total Debt" metric for the given company we will try
     # to use "Total Liabilities Net Minority Interest" instead.
-    if debt is None:
+    if debt is None or str(debt).lower() == 'nan':
         debt = latest_balance.get('Total Liabilities Net Minority Interest', 'NaN')
     
     # In the event there is no "Gross Profit" metric for the given company we will try
     # to use "Pretax Income" instead.
-    if earnings is None:
+    if earnings is None or str(earnings).lower() == 'nan':
         earnings = latest_income.get('Pretax Income', 'NaN')
 
     try:
