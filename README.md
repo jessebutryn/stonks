@@ -43,22 +43,22 @@ Stonks is a project designed to provide a streamlined and focused overview of ke
 
 1. Help
 
-    ```bash
-    $ stonks --help
-    usage: stonks [-h] [--no-color] [--summarize] [--score] [--csv] [-H] ticker
+    ```
+    usage: stonks [-h] [-f FILE] [--no-color] [--csv] [-H] [--json] [tickers [tickers ...]]
 
-    Stonks as hell
+    Stonks - A financial analysis tool for stock tickers, providing key metrics and scores for informed investment
+    decisions.
 
     positional arguments:
-    ticker        Stock ticker symbol
+    tickers               Stock ticker symbols
 
     optional arguments:
-    -h, --help    show this help message and exit
-    --no-color    Disable colored output
-    --summarize   Run summarize commands
-    --score       Run score commands
-    --csv         Output in CSV format
-    -H, --header  Include header in CSV output
+    -h, --help            show this help message and exit
+    -f FILE, --file FILE  Read ticker symbols from a file
+    --no-color            Disable colored output
+    --csv                 Output in CSV format
+    -H, --header          Include header in CSV output
+    --json                Output in json format.
     ```
 
 1. Example
