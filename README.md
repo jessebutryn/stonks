@@ -44,10 +44,9 @@ Stonks is a project designed to provide a streamlined and focused overview of ke
 1. Help
 
     ```
-    usage: stonks [-h] [-f FILE] [--no-color] [--csv] [-H] [--json] [tickers [tickers ...]]
+    usage: stonks [-h] [-f FILE] [--no-color] [--csv] [-H] [--json] [--info {info,balance,income,cashflow,financials}] [-q] [tickers [tickers ...]]
 
-    Stonks - A financial analysis tool for stock tickers, providing key metrics and scores for informed investment
-    decisions.
+    Stonks - A financial analysis tool for stock tickers, providing key metrics and scores for informed investment decisions.
 
     positional arguments:
     tickers               Stock ticker symbols
@@ -58,7 +57,10 @@ Stonks is a project designed to provide a streamlined and focused overview of ke
     --no-color            Disable colored output
     --csv                 Output in CSV format
     -H, --header          Include header in CSV output
-    --json                Output in json format.
+    --json                Output in json format
+    --info {info,balance,income,cashflow,financials}
+                            Specify the type of financial information to retrieve
+    -q, --quarterly       When used with --info this will return quarterly results instead of annual
     ```
 
 1. Example

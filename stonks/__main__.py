@@ -91,7 +91,7 @@ def make_table(ticker, use_color, data):
 
     return table
 
-def process_ticker(ticker, use_color, output, csv_writer):
+def process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly):
     """
     Process a single stock ticker and output financial metrics.
 
@@ -102,22 +102,26 @@ def process_ticker(ticker, use_color, output, csv_writer):
     - csv_writer: CSV writer object for writing to stdout.
     """
 
-    data = info.get_data(ticker, 'all', None)
-
-    # We don't want color formatting data mucking up csv output
-    if output is not None:
-        use_color = False
-
-    table = make_table(ticker, use_color, data)
-    # Output data in either csv or table format depending on what is requested
-    if output == 'csv':
-        csv_writer.writerow([str(value) for value in table.values()])
-    elif output == 'json':
-        json_string = json.dumps(table, indent=2)
-        print(json_string)        
+    if print_info is not None:
+        data = info.print_data(ticker, print_info, quarterly)
+        print(data)
     else:
-        table_as_list = [[key, value] for key, value in table.items()]
-        print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
+        data = info.get_data(ticker)
+        # We don't want color formatting data mucking up csv output
+        if output is not None:
+            use_color = False
+
+        table = make_table(ticker, use_color, data)
+
+        # Output data in either csv or table format depending on what is requested
+        if output == 'csv':
+            csv_writer.writerow([str(value) for value in table.values()])
+        elif output == 'json':
+            json_string = json.dumps(table, indent=2)
+            print(json_string)        
+        else:
+            table_as_list = [[key, value] for key, value in table.items()]
+            print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
     
 def main():
     # Parse arguments
@@ -127,7 +131,9 @@ def main():
     parser.add_argument('--no-color', action='store_true', help='Disable colored output')
     parser.add_argument('--csv', action='store_true', help='Output in CSV format') 
     parser.add_argument('-H', '--header', action='store_true', help='Include header in CSV output')
-    parser.add_argument('--json', action='store_true', help='Output in json format.')
+    parser.add_argument('--json', action='store_true', help='Output in json format')
+    parser.add_argument('--info', choices=['info', 'balance', 'income', 'cashflow', 'financials'], help='Specify the type of financial information to retrieve')
+    parser.add_argument('-q', '--quarterly', action='store_true', help='When used with --info this will return quarterly results instead of annual')
 
     args = parser.parse_args()
 
@@ -135,6 +141,8 @@ def main():
     output_csv = args.csv
     output_json = args.json
     use_header = args.header
+    print_info = args.info
+    quarterly = args.quarterly
     tickers = []
 
     if output_csv:
@@ -169,7 +177,7 @@ def main():
 
     # Run process_ticker() for each ticker in tickers.
     for ticker in tickers:
-        process_ticker(ticker, use_color, output, csv_writer)
+        process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly)
 
 if __name__ == "__main__":
     main()
