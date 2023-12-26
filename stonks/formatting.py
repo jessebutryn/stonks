@@ -70,3 +70,7 @@ def remove_colors_from_table(table):
     # Remove all color values from the inputted table.
     cleaned_table = {key: remove_color(value) for key, value in table.items()}
     return cleaned_table
+
+def parse_info(value):
+    # Custom function to parse multiple values for --info
+    return value.split()

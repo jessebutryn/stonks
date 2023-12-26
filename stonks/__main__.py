@@ -2,38 +2,36 @@
 import yfinance as yf
 import sys
 import csv
+import json
 from tabulate import tabulate
 import pandas as pd
 import argparse
 import stonks.numbers as num
 import stonks.finance as fin
 import stonks.formatting as fmt
+import stonks.info as info
 
-def process_ticker(ticker, use_color, output_csv, csv_writer):
-    # This function gathers all the information required for a single given ticker and outputs
-    # in the desired format.
+def make_table(ticker, use_color, data):
+    """
+    Build a table with financial metrics for a given stock ticker.
 
-    # Gather the required info from yfinance
-    data = yf.Ticker(ticker)
-    info = data.info
-    balance = data.balance_sheet
-    income = data.income_stmt
-    cashflow = data.cashflow
+    Parameters:
+    - ticker (str): Stock ticker symbol.
+    - use_color (bool): Flag to enable or disable color formatting.
+    - info: Information about the stock.
+    - balance: Balance sheet data.
+    - income: Income statement data.
+    - cashflow: Cashflow data.
 
-    # Check length of yfinance objects and exit if any are empty
-    len_balance = len(balance.columns)
-    len_income = len(income.columns)
-    len_cashflow = len(cashflow.columns)
+    Returns:
+    dict: A dictionary representing the financial metrics table.
+    """
 
-    if len_balance == 0 or len_income == 0 or len_cashflow == 0:
-        print(f"Error: {ticker} not enough data")
-        sys.exit(1)
+    info = data['info']
+    balance = data['balance']
+    income = data['income']
+    cashflow = data['cashflow']
 
-    # We don't want color formatting data mucking up csv output
-    if output_csv:
-        use_color = False
-
-    # Gather up all the desired metrics for our output.
     _raw_cap = info.get('marketCap', 'NaN')
     _mkt_cap = num.format_currency(_raw_cap)
     _current_price = num.format_currency(info.get('currentPrice', 'NaN'))
@@ -90,10 +88,33 @@ def process_ticker(ticker, use_color, output_csv, csv_writer):
     _score = fmt.colorize(_score, "high", 20, 28, use_color)
     # Add score to orginal table
     table["Score"] = _score
- 
+
+    return table
+
+def process_ticker(ticker, use_color, output, csv_writer):
+    """
+    Process a single stock ticker and output financial metrics.
+
+    Parameters:
+    - ticker (str): Stock ticker symbol.
+    - use_color (bool): Flag to enable or disable color formatting.
+    - output_csv (bool): Flag to determine the output format (CSV or table).
+    - csv_writer: CSV writer object for writing to stdout.
+    """
+
+    data = info.get_data(ticker, 'all', None)
+
+    # We don't want color formatting data mucking up csv output
+    if output is not None:
+        use_color = False
+
+    table = make_table(ticker, use_color, data)
     # Output data in either csv or table format depending on what is requested
-    if output_csv:
+    if output == 'csv':
         csv_writer.writerow([str(value) for value in table.values()])
+    elif output == 'json':
+        json_string = json.dumps(table, indent=2)
+        print(json_string)        
     else:
         table_as_list = [[key, value] for key, value in table.items()]
         print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
@@ -106,13 +127,22 @@ def main():
     parser.add_argument('--no-color', action='store_true', help='Disable colored output')
     parser.add_argument('--csv', action='store_true', help='Output in CSV format') 
     parser.add_argument('-H', '--header', action='store_true', help='Include header in CSV output')
+    parser.add_argument('--json', action='store_true', help='Output in json format.')
 
     args = parser.parse_args()
 
     use_color = not args.no_color
     output_csv = args.csv
+    output_json = args.json
     use_header = args.header
     tickers = []
+
+    if output_csv:
+        output = 'csv'
+    elif output_json:
+        output = 'json'
+    else:
+        output = None
 
     # read args from file 
     if args.file:
@@ -131,7 +161,7 @@ def main():
 
     # I'm not a fan of how this works but if header is to be printed I only want it to be printed once so
     # this manually creates that header row before the process_ticker() iterations.
-    if output_csv and use_header:
+    if output == 'csv' and use_header:
         csv_writer.writerow(["Ticker", "Market Cap", "Current Price", "Debt to Equity", "Debt to Earnings",
                             "Earnings Yield", "Current Ratio", "Quick Ratio", "Avg Revenue Growth",
                             "Profit Margin", "Return on Equity", "EPS", "PE", "Avg Cashflow",
@@ -139,7 +169,7 @@ def main():
 
     # Run process_ticker() for each ticker in tickers.
     for ticker in tickers:
-        process_ticker(ticker, use_color, output_csv, csv_writer)
+        process_ticker(ticker, use_color, output, csv_writer)
 
 if __name__ == "__main__":
     main()
