@@ -1,7 +1,9 @@
 import yfinance as yf
+import json
+import pandas as pd
 
 def get_income(data, duration):
-    if duration == 'quarterly':
+    if duration:
         value = data.quarterly_income_stmt
     else:
         value = data.income_stmt
@@ -9,7 +11,7 @@ def get_income(data, duration):
     return value
 
 def get_balance(data, duration):
-    if duration == 'quarterly':
+    if duration:
         value = data.quarterly_balance_sheet
     else:
         value = data.balance_sheet
@@ -17,57 +19,69 @@ def get_balance(data, duration):
     return value
 
 def get_cashflow(data, duration):
-    if duration == 'quarterly':
+    if duration:
         value = data.quarterly_cashflow
     else:
         value = data.cashflow
 
     return value
 
-def get_data(ticker, type, duration):
+def frame_to_json(frame):
+    data_list = []
+
+    # Convert index to strings
+    frame.index = frame.index.astype(str)
+
+    # Convert column names to strings
+    frame.columns = frame.columns.astype(str)
+
+    for column in frame.columns:
+        entry = {column: dict(zip(frame.index, frame[column]))}
+        data_list.append(entry)
+
+    return json.dumps(data_list, indent=2)
+
+def get_data(ticker):
     data = yf.Ticker(ticker)
 
-    info = None
-    balance = None
-    income = None
-    cashflow = None
-
-    type_values = type.split()
-
-    if 'info' in type_values or 'all' in type_values:
-        info = data.info
-
-        if 'info' in type_values and (balance is None or balance.empty):
-            print(f"Error: {ticker} balance sheet data is empty")
-            sys.exit(1)
-
-    if 'balance' in type_values or 'all' in type_values:
-        balance = get_balance(data, duration)
-        
-        if 'balance' in type_values and (balance is None or balance.empty):
-            print(f"Error: {ticker} balance sheet data is empty")
-            sys.exit(1)
-
-    if 'income' in type_values or 'all' in type_values:
-        income = get_income(data, duration)
-
-        if 'income' in type_values and (income is None or income.empty):
-            print(f"Error: {ticker} income statement data is empty")
-            sys.exit(1)
-
-    if 'cashflow' in type_values or 'all' in type_values:
-        cashflow = get_cashflow(data, duration)
-
-        if 'cashflow' in type_values and (cashflow is None or cashflow.empty):
-            print(f"Error: {ticker} cashflow data is empty")
-            sys.exit(1)
+    duration = None
 
     result = {
-        'ticker': ticker,
-        'info': info,
-        'balance': balance,
-        'income': income,
-        'cashflow': cashflow
+        "Ticker": ticker.upper(),
     }
 
+    info = data.info
+    result["info"] = info
+    balance = get_balance(data, duration)
+    result["balance"] = balance
+    income = get_income(data, duration)
+    result["income"] = income
+    cashflow = get_cashflow(data, duration)
+    result["cashflow"] = cashflow
+
     return result
+
+def print_data(ticker, type, duration):
+    data = yf.Ticker(ticker)
+
+    pd.set_option('display.max_rows', None)
+
+    result = {}
+
+    if type == 'info':
+        return json.dumps(data.info, indent=2)
+    
+    if type == 'balance' or type == 'financials':
+        result['balance'] = get_balance(data, duration)
+
+    if type == 'income' or type == 'financials':
+        result['income'] = get_income(data, duration)
+    
+    if type == 'cashflow' or type == 'financials':
+        result['cashflow'] = get_cashflow(data, duration)
+
+    combined = pd.concat(result.values(), keys=result.keys())
+    combined = combined.reset_index()
+    combined = combined.rename(columns={'level_0': 'sheet', 'level_1': 'item'})
+
+    return combined.to_string(index=False)
