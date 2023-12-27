@@ -27,36 +27,31 @@ def make_table(ticker, use_color, data):
     dict: A dictionary representing the financial metrics table.
     """
 
-    info = data['info']
-    balance = data['balance']
-    income = data['income']
-    cashflow = data['cashflow']
-
-    _raw_cap = info.get('marketCap', 'NaN')
+    _raw_cap = data.info.get('marketCap', None)
     _mkt_cap = num.format_currency(_raw_cap)
-    _current_price = num.format_currency(info.get('currentPrice', 'NaN'))
-    _debt_to_equity = fin.debt_to_equity(balance)
+    _current_price = num.format_currency(data.info.get('currentPrice', None))
+    _debt_to_equity = fin.debt_to_equity(data)
     _debt_to_equity = fmt.colorize(_debt_to_equity, "low", 0.5, 1, use_color)
-    _debt_to_earnings = fin.debt_to_earnings(balance, income)
+    _debt_to_earnings = fin.debt_to_earnings(data)
     _debt_to_earnings = fmt.colorize(_debt_to_earnings, "low", 1, 2, use_color)
-    _earnings_yield = fin.earnings_yield(info)
+    _earnings_yield = fin.earnings_yield(data)
     _earnings_yield = fmt.colorize(_earnings_yield, "high", 1, 2, use_color)
-    _current_ratio = info.get('currentRatio', 'NaN')
+    _current_ratio = fin.current_ratio(data)
     _current_ratio = fmt.colorize(_current_ratio, "high", 1, 1, use_color)
-    _quick_ratio = info.get('quickRatio', 'NaN')
+    _quick_ratio = fin.quick_ratio(data)
     _quick_ratio = fmt.colorize(_quick_ratio, "high", 1, 1, use_color)
-    _avg_revenue_growth = fin.revenue_growth(income)
+    _avg_revenue_growth = fin.revenue_growth(data)
     _avg_revenue_growth = fmt.colorize(_avg_revenue_growth, "high", 8, 12, use_color)
-    _profit_margin = fin.profit_margin(income)
+    _profit_margin = fin.profit_margin(data)
     _profit_margin = fmt.colorize(_profit_margin, "high", 10, 15, use_color)
-    _roe = fin.return_on_equity(balance, income)
+    _roe = fin.return_on_equity(data)
     _roe = fmt.colorize(_roe, "high", 10, 15, use_color)
-    _eps = info.get('trailingEps', 'NaN')
+    _eps = data.info.get('trailingEps', None)
     _eps = fmt.colorize(_eps, "high", 3, 8, use_color)
-    _pe = round(float(info.get('trailingPE', 'NaN')), 2)
-    _avg_fcf_change = fin.avg_free_cash_flow_change(cashflow)
+    _pe = round(float(data.info.get('trailingPE', None)), 2)
+    _avg_fcf_change = fin.avg_free_cash_flow_change(data)
     _avg_fcf_change = fmt.colorize(_avg_fcf_change, "high", 5, 10, use_color)
-    _raw_fcf = cashflow.loc['Free Cash Flow'].sort_index(ascending=False).mean()
+    _raw_fcf = data.cashflow.loc['Free Cash Flow'].dropna().sort_index(ascending=False).mean()
     _avg_fcf = num.format_currency(_raw_fcf)
     _avg_fcf = fmt.colorize(_avg_fcf, "high", 0, 1, use_color)
     _fcf_yield = fin.fcf_yield(_raw_cap, _raw_fcf)
@@ -84,7 +79,7 @@ def make_table(ticker, use_color, data):
 
     # We need a table with no colors in order to calculate the score
     clean_table = fmt.remove_colors_from_table(table)
-    _score = fin.calc_score(ticker, clean_table)
+    _score = fin.calc_score(clean_table)
     _score = fmt.colorize(_score, "high", 20, 28, use_color)
     # Add score to orginal table
     table["Score"] = _score
@@ -102,11 +97,14 @@ def process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly)
     - csv_writer: CSV writer object for writing to stdout.
     """
 
+    data = yf.Ticker(ticker)
+
     if print_info is not None:
-        data = info.print_data(ticker, print_info, quarterly)
-        print(data)
+        pdata = info.print_data(ticker, data, print_info, quarterly)
+        print(pdata)
     else:
-        data = info.get_data(ticker)
+        # hdata = info.get_data(ticker, data, None)
+        # qdata = info.get_data(ticker, data, True)
         # We don't want color formatting data mucking up csv output
         if output is not None:
             use_color = False

@@ -41,11 +41,7 @@ def frame_to_json(frame):
 
     return json.dumps(data_list, indent=2)
 
-def get_data(ticker):
-    data = yf.Ticker(ticker)
-
-    duration = None
-
+def get_data(ticker, data, duration):
     result = {
         "Ticker": ticker.upper(),
     }
@@ -61,9 +57,7 @@ def get_data(ticker):
 
     return result
 
-def print_data(ticker, type, duration):
-    data = yf.Ticker(ticker)
-
+def print_data(ticker, data, type, duration):
     pd.set_option('display.max_rows', None)
 
     result = {}
