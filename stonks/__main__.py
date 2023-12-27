@@ -6,6 +6,7 @@ import json
 from tabulate import tabulate
 import pandas as pd
 import argparse
+import time
 import stonks.numbers as num
 import stonks.finance as fin
 import stonks.formatting as fmt
@@ -27,9 +28,9 @@ def make_table(ticker, use_color, data):
     dict: A dictionary representing the financial metrics table.
     """
 
-    _raw_cap = data.info.get('marketCap', None)
+    _raw_cap = data['info'].get('marketCap', None)
     _mkt_cap = num.format_currency(_raw_cap)
-    _current_price = num.format_currency(data.info.get('currentPrice', None))
+    _current_price = num.format_currency(data['info'].get('currentPrice', None))
     _debt_to_equity = fin.debt_to_equity(data)
     _debt_to_equity = fmt.colorize(_debt_to_equity, "low", 0.5, 1, use_color)
     _debt_to_earnings = fin.debt_to_earnings(data)
@@ -46,12 +47,12 @@ def make_table(ticker, use_color, data):
     _profit_margin = fmt.colorize(_profit_margin, "high", 10, 15, use_color)
     _roe = fin.return_on_equity(data)
     _roe = fmt.colorize(_roe, "high", 10, 15, use_color)
-    _eps = data.info.get('trailingEps', None)
+    _eps = data['info'].get('trailingEps', None)
     _eps = fmt.colorize(_eps, "high", 3, 8, use_color)
-    _pe = round(float(data.info.get('trailingPE', None)), 2)
+    _pe = round(float(data['info'].get('trailingPE', 'NaN')), 2)
     _avg_fcf_change = fin.avg_free_cash_flow_change(data)
     _avg_fcf_change = fmt.colorize(_avg_fcf_change, "high", 5, 10, use_color)
-    _raw_fcf = data.cashflow.loc['Free Cash Flow'].dropna().sort_index(ascending=False).mean()
+    _raw_fcf = fin.avg_free_cash_flow(data)
     _avg_fcf = num.format_currency(_raw_fcf)
     _avg_fcf = fmt.colorize(_avg_fcf, "high", 0, 1, use_color)
     _fcf_yield = fin.fcf_yield(_raw_cap, _raw_fcf)
@@ -96,31 +97,33 @@ def process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly)
     - output_csv (bool): Flag to determine the output format (CSV or table).
     - csv_writer: CSV writer object for writing to stdout.
     """
+    try:
+        data_class = info.FinancialData(ticker)
+        data = data_class.data
 
-    data = yf.Ticker(ticker)
-
-    if print_info is not None:
-        pdata = info.print_data(ticker, data, print_info, quarterly)
-        print(pdata)
-    else:
-        # hdata = info.get_data(ticker, data, None)
-        # qdata = info.get_data(ticker, data, True)
-        # We don't want color formatting data mucking up csv output
-        if output is not None:
-            use_color = False
-
-        table = make_table(ticker, use_color, data)
-
-        # Output data in either csv or table format depending on what is requested
-        if output == 'csv':
-            csv_writer.writerow([str(value) for value in table.values()])
-        elif output == 'json':
-            json_string = json.dumps(table, indent=2)
-            print(json_string)        
+        if print_info is not None:
+            pdata = info.print_data(data, print_info, quarterly)
+            print(pdata)
         else:
-            table_as_list = [[key, value] for key, value in table.items()]
-            print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
-    
+            # We don't want color formatting data mucking up csv output
+            if output is not None:
+                use_color = False
+
+            table = make_table(ticker, use_color, data)
+
+            # Output data in either csv or table format depending on what is requested
+            if output == 'csv':
+                csv_writer.writerow([str(value) for value in table.values()])
+            elif output == 'json':
+                json_string = json.dumps(table, indent=2)
+                print(json_string)        
+            else:
+                table_as_list = [[key, value] for key, value in table.items()]
+                print(tabulate(table_as_list, headers=["Attribute", "Value"], tablefmt="simple"))
+
+    except (ValueError, TypeError) as e:
+        return f"{ticker} Error: {e}"
+        
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description='Stonks - A financial analysis tool for stock tickers, providing key metrics and scores for informed investment decisions.')
@@ -176,6 +179,7 @@ def main():
     # Run process_ticker() for each ticker in tickers.
     for ticker in tickers:
         process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     main()
