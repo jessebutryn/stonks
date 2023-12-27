@@ -16,7 +16,7 @@ Stonks is a project designed to provide a streamlined and focused overview of ke
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/your-username/stonks.git && cd stonks
+    git clone https://github.com/jessebutryn/stonks.git && cd stonks
     ```
 
 2. Install dependencies:
@@ -36,7 +36,7 @@ Stonks is a project designed to provide a streamlined and focused overview of ke
     If you don't want to install the module you can just run it from within the repository dir like so:
     
     ```bash
-    python3 stonks --help
+    python3 -m stonks --help
     ```
 
 ## Usage
