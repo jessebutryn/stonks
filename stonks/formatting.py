@@ -1,4 +1,5 @@
 import re
+import pandas as pd
 
 def colorize(value, condition, low_threshold, high_threshold, use_color):
     # This function will take a numeric value and colorize it either red, yellow, 
@@ -16,21 +17,20 @@ def colorize(value, condition, low_threshold, high_threshold, use_color):
     # use_color         =   This carries over the use_color parameter from main.  If --no_color
     #                       is specified this function will simply return the value as is.
     #
-    if not use_color:
-        return str(value)
-
     value_str = str(value)
-
-    # If the value is 'NaN' return it as is
-    if value_str.lower() == 'nan':
-        return value_str
-
     # If the value has a non digit suffix store it and remove it
     suffix = value_str[-1] if not value_str[-1].isdigit() else None
     value_str = value_str[:-1] if suffix else value_str
-
-    # Convert value to float
-    value_float = float(value_str)
+    value_num = pd.to_numeric(value_str, errors='coerce')
+    
+    if pd.notna(value_num):
+        # Convert value to float
+        value_float = float(value_num)
+    else:
+        return value
+    
+    if not use_color:
+        return value
 
     # Make condition determinations
     if condition == "high":

@@ -27,7 +27,7 @@ def extract_numeric_value(value):
     # In the event we need to get the raw number that was converted to human
     # readable currency format this function will strip the currency suffix.
     if isinstance(value, str):
-        value = value.rstrip('%').rstrip('M').rstrip('B').rstrip('T').rstrip('Q').rstrip('K')
+        value = value.rstrip('%').rstrip('M').rstrip('B').rstrip('T').rstrip('Q').rstrip('K').rstrip('*')
 
     try:
         return float(value)
