@@ -98,6 +98,7 @@ def process_ticker(ticker, use_color, output, csv_writer, print_info, quarterly)
     - csv_writer: CSV writer object for writing to stdout.
     """
     try:
+        ticker = ticker.replace('/', '-').replace('.', '-')
         data_class = info.FinancialData(ticker)
         data = data_class.data
 
