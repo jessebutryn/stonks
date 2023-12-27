@@ -2,9 +2,14 @@ import stonks.numbers as num
 
 def debt_to_equity(data):
     # Calculate the debt to equity ratio by dividing total debt by stockholder's equity
+
+    qbalance = data['quarterly_balance_sheet']
+
+    if qbalance.empty:
+        return None
     
-    latest_date = data.quarterly_balance_sheet.columns.max()
-    latest_balance = data.quarterly_balance_sheet[latest_date]
+    latest_date = qbalance.columns.max()
+    latest_balance = qbalance[latest_date]
     
     debt = latest_balance.get('Total Debt', None)
     equity = latest_balance.get('Stockholders Equity', None)
@@ -25,13 +30,21 @@ def debt_to_equity(data):
         return result
 
     except (ValueError, TypeError) as e:
-        return f"Error calculating def debt_to_equity(): {e}"
+        return 'NaN'
     
 def debt_to_earnings(data):
     # Calculate the debt to earnings ratio by dividing total debt by gross profit.
-    latest_date = data.quarterly_balance_sheet.columns.max()
-    latest_balance = data.quarterly_balance_sheet[latest_date]
-    latest_income = data.quarterly_income_stmt[latest_date]
+
+    qbalance = data['quarterly_balance_sheet']
+    qincome = data['quarterly_income_stmt']
+
+    if qbalance.empty or qincome.empty:
+        return None
+    
+    latest_b_date = qbalance.columns.max()
+    latest_i_date = qincome.columns.max()
+    latest_balance = qbalance[latest_b_date]
+    latest_income = qincome[latest_i_date]
 
     debt = latest_balance.get('Total Debt', None)
     earnings = latest_income.get('Gross Profit', None)
@@ -57,13 +70,13 @@ def debt_to_earnings(data):
         return result
 
     except (ValueError, TypeError) as e:
-        return f"Error calculating def debt_to_earnings(): {e}"
+        return 'NaN'
     
 def earnings_yield(data):
     # Calculate earnings yield by diving earnings per share by the current share price
     try:
-        earnings_per_share = data.info.get('trailingEps', None)
-        current_price = data.info.get('currentPrice', None)
+        earnings_per_share = data['info'].get('trailingEps', None)
+        current_price = data['info'].get('currentPrice', None)
 
         result = float("{:.2f}".format(earnings_per_share / current_price))
 
@@ -76,7 +89,16 @@ def revenue_growth(data):
     # Calculate percentage of growth from the oldest revenue number returned
     # (typically 4 years) to the newest revenue number returned.
     try:
-        value = data.income_stmt.loc['Total Revenue'].dropna()
+        income = data['income_stmt']
+
+        if income.empty or 'Total Revenue' not in income.index:
+            return None
+        
+        value = income.loc['Total Revenue'].dropna()
+
+        if value.empty or value.isna().all():
+            return None
+        
         latest_rev = value[value.index == value.index.max()].values[0]
         oldest_rev = value[value.index == value.index.min()].values[0]
         years = value.index.nunique()
@@ -90,14 +112,19 @@ def revenue_growth(data):
         return f"{avg_change:.2f}%"
     
     except (ValueError, TypeError) as e:
-        return f"Error calculating revenue_growth(): {e}"
+        return 'NaN'
 
 
 def profit_margin(data):
     # Calculate the profit margin by dividing "Net Income" by "Total Revenue"
     try:
-        latest_date = data.income_stmt.columns.max()
-        latest_income = data.income_stmt[latest_date]
+        income = data['income_stmt']
+
+        if income.empty:
+            return None
+        
+        latest_date = income.columns.max()
+        latest_income = income[latest_date]
 
         net_income = latest_income.get('Net Income', None)
         total_rev = latest_income.get('Total Revenue', None)
@@ -110,15 +137,22 @@ def profit_margin(data):
         return f"{margin:.2f}%"
 
     except (ValueError, TypeError) as e:
-        return f"Error calculating profit_margin(): {e}"
+        return 'NaN'
 
 def return_on_equity(data):
     # Calculate return on equity by dividing "Net Income" by the
     # "Stockholders Equity"
     try:
-        latest_date = data.quarterly_balance_sheet.columns.max()
-        latest_balance = data.quarterly_balance_sheet[latest_date]
-        latest_income = data.quarterly_income_stmt[latest_date]
+        balance = data['balance_sheet']
+        income = data['income_stmt']
+
+        if income.empty or balance.empty:
+            return None
+    
+        latest_b_date = balance.columns.max()
+        latest_i_date = income.columns.max()
+        latest_balance = balance[latest_b_date]
+        latest_income = income[latest_i_date]
 
         net_income = latest_income.get('Net Income', None)
         equity = latest_balance.get('Stockholders Equity', None)
@@ -131,13 +165,18 @@ def return_on_equity(data):
         return f"{roe:.2f}%"
         
     except (ValueError, TypeError) as e:
-        return f"Error calculating return_on_equity(): {e}"
+        return 'NaN'
     
 def avg_free_cash_flow_change(data):
     # Calculate average free cash flow change year over year from oldest
     # data returned (typically 4 years) to latest year returned.
     try:
-        value = data.cashflow.loc['Free Cash Flow'].dropna()
+        cashflow = data['cashflow']
+
+        if cashflow.empty:
+            return None
+        
+        value = cashflow.loc['Free Cash Flow'].dropna()
         latest_fcf = value[value.index == value.index.max()].values[0]
         oldest_fcf = value[value.index == value.index.min()].values[0]
         years = value.index.nunique()
@@ -168,13 +207,13 @@ def fcf_yield(cap, cash):
         fcf_yield = (cash / cap) * 100
         return f"{fcf_yield:.2f}%"
 
-    except ValueError as e:
-        return f"Error calculating fcf_yield(): {e}"
+    except (ValueError, TypeError) as e:
+        return 'NaN'
     
 def current_ratio(data):
     # Calculate current ratio
     try:
-        ratio = data.info.get('currentRatio', None)
+        ratio = data['info'].get('currentRatio', None)
         wing_it = None
 
         if ratio is not None:
@@ -182,8 +221,13 @@ def current_ratio(data):
         else:
             wing_it = True
 
-        latest_date = data.quarterly_balance_sheet.columns.max()
-        latest_balance = data.quarterly_balance_sheet[latest_date]
+        qbalance = data['quarterly_balance_sheet']
+
+        if qbalance.empty:
+            return None
+        
+        latest_date = qbalance.columns.max()
+        latest_balance = qbalance[latest_date]
 
         current_liabilities = latest_balance.get('Current Liabilities', None)
         current_assets = latest_balance.get('Current Assets', None)
@@ -212,21 +256,26 @@ def current_ratio(data):
         return f"{ratio:.2f}"
 
     except ValueError as e:
-        return f"Error calculating current_ratio(): {e}"
+        return 'NaN'
     
 def quick_ratio(data):
     # Calculate the quick ratio
     try:
-        ratio = data.info.get('quickRatio', None)
+        ratio = data['info'].get('quickRatio', None)
         wing_it = None
 
         if ratio is not None:
             return ratio
         else:
             wing_it = True
+
+        qbalance = data['quarterly_balance_sheet']
+
+        if qbalance.empty:
+            return None
         
-        latest_date = data.quarterly_balance_sheet.columns.max()
-        latest_balance = data.quarterly_balance_sheet[latest_date]
+        latest_date = qbalance.columns.max()
+        latest_balance = qbalance[latest_date]
 
         current_liabilities = latest_balance.get('Current Liabilities', None)
         cash = latest_balance.get('Cash Cash Equivalents And Short Term Investments', 0)
@@ -251,7 +300,14 @@ def quick_ratio(data):
         return f"{ratio:.2f}"
 
     except ValueError as e:
-        return f"Error calculating current_ratio(): {e}"
+        return 'NaN'
+    
+def avg_free_cash_flow(data):
+    try:
+        _raw_fcf = data['cashflow'].loc['Free Cash Flow'].dropna().sort_index(ascending=False).mean()
+        return _raw_fcf
+    except (KeyError, AttributeError, TypeError):
+        return None
 
 def calc_score(table):
     # This is probably an excessively rudimentary function to calculate the
@@ -260,16 +316,16 @@ def calc_score(table):
     # score is but the "perfect" score is 42.  Life, the universe, and everything.
     try:
         ticker = table.get("Ticker")
-        debt_to_equity = float(table.get("Debt to Equity", 2))
-        debt_to_earnings = float(table.get("Debt to Earnings", 2))
-        earnings_yield = float(table.get("Earnings Yield", 0))
-        current_ratio = num.extract_numeric_value(table.get("Current Ratio", 0))
-        quick_ratio = num.extract_numeric_value(table.get("Quick Ratio", 0))
-        avg_revenue_growth = num.extract_numeric_value(table.get("Avg Revenue Growth", 0))
-        profit_margin = num.extract_numeric_value(table.get("Profit Margin", 0))
-        return_on_equity = num.extract_numeric_value(table.get("Return on Equity", 0))
-        avg_cashflow_growth = num.extract_numeric_value(table.get("Avg Cashflow Growth", 0))
-        cashflow_yield = num.extract_numeric_value(table.get("Cashflow Yield", 0))
+        debt_to_equity = num.extract_numeric_value(table.get("Debt to Equity"), 2)
+        debt_to_earnings = num.extract_numeric_value(table.get("Debt to Earnings"), 2)
+        earnings_yield = num.extract_numeric_value(table.get("Earnings Yield"), 2)
+        current_ratio = num.extract_numeric_value(table.get("Current Ratio"), 2)
+        quick_ratio = num.extract_numeric_value(table.get("Quick Ratio"), 2)
+        avg_revenue_growth = num.extract_numeric_value(table.get("Avg Revenue Growth"), 2)
+        profit_margin = num.extract_numeric_value(table.get("Profit Margin"), 2)
+        return_on_equity = num.extract_numeric_value(table.get("Return on Equity"), 2)
+        avg_cashflow_growth = num.extract_numeric_value(table.get("Avg Cashflow Growth"), 2)
+        cashflow_yield = num.extract_numeric_value(table.get("Cashflow Yield"), 2)
         _score = 0
 
         # The best debt is no debt but the lower the better.
