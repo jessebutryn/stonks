@@ -28,41 +28,71 @@ def make_table(ticker, use_color, data):
     dict: A dictionary representing the financial metrics table.
     """
 
+    _currency = data['info'].get('financialCurrency', None)
+    _exchange_rate = num.get_rate(_currency)
+
     _raw_cap = data['info'].get('marketCap', None)
     _mkt_cap = num.format_currency(_raw_cap)
+
     _current_price = num.format_currency(data['info'].get('currentPrice', None))
+
+    _total_debt = fin.current_debt(data)
+    _total_debt = num.exchange_currency(_total_debt, _exchange_rate)
+    _total_debt = num.format_currency(_total_debt)
+
+    _current_cash = fin.current_cash(data)
+    _current_cash = num.exchange_currency(_current_cash, _exchange_rate)
+    _current_cash = num.format_currency(_current_cash)
+
     _debt_to_equity = fin.debt_to_equity(data)
     _debt_to_equity = fmt.colorize(_debt_to_equity, "low", 0.5, 1, use_color)
+
     _debt_to_earnings = fin.debt_to_earnings(data)
     _debt_to_earnings = fmt.colorize(_debt_to_earnings, "low", 1, 2, use_color)
+
     _earnings_yield = fin.earnings_yield(data)
     _earnings_yield = fmt.colorize(_earnings_yield, "high", 1, 2, use_color)
+
     _current_ratio = fin.current_ratio(data)
     _current_ratio = fmt.colorize(_current_ratio, "high", 1, 1, use_color)
+
     _quick_ratio = fin.quick_ratio(data)
     _quick_ratio = fmt.colorize(_quick_ratio, "high", 1, 1, use_color)
+
     _avg_revenue_growth = fin.revenue_growth(data)
     _avg_revenue_growth = fmt.colorize(_avg_revenue_growth, "high", 8, 12, use_color)
+
     _profit_margin = fin.profit_margin(data)
     _profit_margin = fmt.colorize(_profit_margin, "high", 10, 15, use_color)
+
     _roe = fin.return_on_equity(data)
     _roe = fmt.colorize(_roe, "high", 10, 15, use_color)
+
     _eps = data['info'].get('trailingEps', None)
     _eps = fmt.colorize(_eps, "high", 3, 8, use_color)
+
     _pe = round(float(data['info'].get('trailingPE', 'NaN')), 2)
+
     _avg_fcf_change = fin.avg_free_cash_flow_change(data)
     _avg_fcf_change = fmt.colorize(_avg_fcf_change, "high", 5, 10, use_color)
+
     _raw_fcf = fin.avg_free_cash_flow(data)
+    _raw_fcf = num.exchange_currency(_raw_fcf, _exchange_rate)
+
     _avg_fcf = num.format_currency(_raw_fcf)
     _avg_fcf = fmt.colorize(_avg_fcf, "high", 0, 1, use_color)
+
     _fcf_yield = fin.fcf_yield(_raw_cap, _raw_fcf)
     _fcf_yield = fmt.colorize(_fcf_yield, "high", 0, 5, use_color)
 
     # Build table with desired data
     table = {
         "Ticker": ticker.upper(),
+        "Currency": _currency,
         "Market Cap": _mkt_cap,
         "Current Price": _current_price,
+        "Cash on hand": _current_cash,
+        "Current Debt": _total_debt,
         "Debt to Equity": _debt_to_equity,
         "Debt to Earnings": _debt_to_earnings,
         "Earnings Yield": _earnings_yield,
@@ -172,7 +202,7 @@ def main():
     # I'm not a fan of how this works but if header is to be printed I only want it to be printed once so
     # this manually creates that header row before the process_ticker() iterations.
     if output == 'csv' and use_header:
-        csv_writer.writerow(["Ticker", "Market Cap", "Current Price", "Debt to Equity", "Debt to Earnings",
+        csv_writer.writerow(["Ticker", "Currency", "Market Cap", "Current Price", "Cash on hand", "Current Debt", "Debt to Equity", "Debt to Earnings",
                             "Earnings Yield", "Current Ratio", "Quick Ratio", "Avg Revenue Growth",
                             "Profit Margin", "Return on Equity", "EPS", "PE", "Avg Cashflow",
                             "Avg Cashflow Growth", "Cashflow Yield", "Score"])

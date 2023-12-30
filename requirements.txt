@@ -1,3 +1,4 @@
 yfinance
 pandas
 tabulate
+currency_converter
