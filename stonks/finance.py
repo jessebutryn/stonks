@@ -1,4 +1,5 @@
 import stonks.numbers as num
+import math
 
 def debt_to_equity(data):
     # Calculate the debt to equity ratio by dividing total debt by stockholder's equity
@@ -72,6 +73,43 @@ def debt_to_earnings(data):
     except (ValueError, TypeError) as e:
         return 'NaN'
     
+def current_debt(data):
+    # Get current total debt
+    try:    
+        qbalance = data['quarterly_balance_sheet']
+        
+        if qbalance.empty:
+            return None
+        
+        latest_b_date = qbalance.columns.max()
+        latest_balance = qbalance[latest_b_date]
+        debt = latest_balance.get('Total Debt', None)
+
+        return debt
+    
+    except (ValueError, TypeError) as e:
+        return 'NaN'
+    
+def current_cash(data):
+    # Get the current cash on hand
+    try:    
+        qbalance = data['quarterly_balance_sheet']
+        
+        if qbalance.empty:
+            return None
+        
+        latest_b_date = qbalance.columns.max()
+        latest_balance = qbalance[latest_b_date]
+        cash = latest_balance.get('Cash Cash Equivalents And Short Term Investments', 0)
+
+        if cash == 0:
+            cash = latest_balance.get('Cash And Cash Equivalents', 0)
+
+        return cash
+    
+    except (ValueError, TypeError) as e:
+        return 'NaN'
+
 def earnings_yield(data):
     # Calculate earnings yield by diving earnings per share by the current share price
     try:
@@ -199,7 +237,7 @@ def fcf_yield(cap, cash):
     # and how much cash will it put in my pocket?
     try:
         cap = float(cap)
-        cash = float(cash)
+        cash = float(num.extract_numeric_value(cash, None))
 
         if cap <= 0:
             return "NaN"
@@ -232,18 +270,39 @@ def current_ratio(data):
         current_liabilities = latest_balance.get('Current Liabilities', None)
         current_assets = latest_balance.get('Current Assets', None)
 
-        if current_liabilities is None:
-            accounts_payable = latest_balance.get('Payables And Accrued Expenses', 0)
+        if current_liabilities is None:     
+            payables = latest_balance.get('Payables', 0)
+            if payables == 0:
+                payables = latest_balance.get('Payables And Accrued Expenses', 0)
+                if payables == 0:
+                    payables = latest_balance.get('Accounts Payable', 0)
+
             deferred_liabilities = latest_balance.get('Current Deferred Liabilities', 0)
             current_debt = latest_balance.get('Current Debt', 0)
             other = latest_balance.get('Other Current Liabilities', 0)
-            current_liabilities = accounts_payable + deferred_liabilities + current_debt + other
+
+            payables = 0 if math.isnan(payables) else payables
+            deferred_liabilities = 0 if math.isnan(deferred_liabilities) else deferred_liabilities
+            current_debt = 0 if math.isnan(current_debt) else current_debt
+            other = 0 if math.isnan(other) else other
+
+            current_liabilities = payables + deferred_liabilities + current_debt + other
 
         if current_assets is None:
             cash = latest_balance.get('Cash Cash Equivalents And Short Term Investments', 0)
+            if cash == 0:
+                cash = latest_balance.get('Cash And Cash Equivalents', 0)
+
             receivables = latest_balance.get('Receivables', 0)
             inventory = latest_balance.get('Inventory', 0)
-            current_assets = cash + receivables + inventory
+            prepaid_assets = latest_balance.get('Prepaid Assets', 0)
+
+            cash = 0 if math.isnan(cash) else cash
+            receivables = 0 if math.isnan(receivables) else receivables
+            inventory = 0 if math.isnan(inventory) else inventory
+            prepaid_assets = 0 if math.isnan(prepaid_assets) else prepaid_assets
+        
+            current_assets = cash + receivables + inventory + prepaid_assets
 
         if current_liabilities == 0 or current_liabilities is None:
             return 'NaN'
@@ -282,12 +341,27 @@ def quick_ratio(data):
         receivables = latest_balance.get('Receivables', 0)
         current_assets = cash + receivables
 
+        if current_assets == 0:
+            cash = latest_balance.get('Cash And Cash Equivalents', 0)
+            current_assets = cash
+
         if current_liabilities is None:
-            accounts_payable = latest_balance.get('Payables And Accrued Expenses', 0)
+            payables = latest_balance.get('Payables', 0)
+            if payables == 0:
+                payables = latest_balance.get('Payables And Accrued Expenses', 0)
+                if payables == 0:
+                    payables = latest_balance.get('Accounts Payable', 0)
+
             deferred_liabilities = latest_balance.get('Current Deferred Liabilities', 0)
             current_debt = latest_balance.get('Current Debt', 0)
             other = latest_balance.get('Other Current Liabilities', 0)
-            current_liabilities = accounts_payable + deferred_liabilities + current_debt + other
+
+            payables = 0 if math.isnan(payables) else payables
+            deferred_liabilities = 0 if math.isnan(deferred_liabilities) else deferred_liabilities
+            current_debt = 0 if math.isnan(current_debt) else current_debt
+            other = 0 if math.isnan(other) else other
+
+            current_liabilities = payables + deferred_liabilities + current_debt + other
 
         if current_liabilities == 0 or current_liabilities is None:
             return 'NaN'
@@ -305,7 +379,9 @@ def quick_ratio(data):
 def avg_free_cash_flow(data):
     try:
         _raw_fcf = data['cashflow'].loc['Free Cash Flow'].dropna().sort_index(ascending=False).mean()
+
         return _raw_fcf
+        
     except (KeyError, AttributeError, TypeError):
         return None
 

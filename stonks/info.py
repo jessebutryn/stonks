@@ -47,17 +47,6 @@ class FinancialData:
         self.ticker = ticker
         self.fetch_data()
 
-    # def fetch_data(self):
-    #     data = yf.Ticker(self.ticker)
-    #     self.data = {
-    #         'balance_sheet': data.balance_sheet,
-    #         'quarterly_balance_sheet': data.quarterly_balance_sheet,
-    #         'cashflow': data.cashflow,
-    #         'info': data.info,
-    #         'income_stmt': data.income_stmt,
-    #         'quarterly_income_stmt': data.quarterly_income_stmt
-    #     }
-    #     return self.data
     def fetch_data(self):
         try:
             data = yf.Ticker(self.ticker)
@@ -74,16 +63,7 @@ class FinancialData:
                 print(f"Error: Ticker '{self.ticker}' not found.")
             else:
                 print(f"Error: {e}")
-            self.data = None  # Optionally set data to None or handle it as needed
-
-# def get_data(ticker):
-#     try:
-#         result = {}
-
-#         data = yf.Ticker(ticker)
-    
-#     except (ValueError, TypeError) as e:
-#         return f"No data for: {ticker}"
+            self.data = None
 
 def print_data(data, type, duration):
     pd.set_option('display.max_rows', None)
